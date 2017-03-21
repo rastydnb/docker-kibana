@@ -1,14 +1,24 @@
-FROM kibana:latest
+FROM openjdk:8u111-jre
 
-RUN apt-get update && apt-get install -y netcat
+MAINTAINER itzg
 
-RUN ls /opt/kibana/config/
-COPY entrypoint.sh /tmp/entrypoint.sh
-RUN chmod +x /tmp/entrypoint.sh
+ENV KIBANA_VERSION 5.1.2
 
-RUN kibana plugin --install elastic/sense
+ADD https://artifacts.elastic.co/downloads/kibana/kibana-${KIBANA_VERSION}-linux-x86_64.tar.gz /tmp/kibana.tgz
 
-COPY config/kibana.yml /opt/kibana/config/kibana.yml
-RUN chmod 777 /opt/kibana/config/kibana.yml
+RUN tar -C /opt -xzf /tmp/kibana.tgz && rm /tmp/kibana.tgz
 
-CMD ["/tmp/entrypoint.sh"]
+ENV KIBANA_HOME /opt/kibana-$KIBANA_VERSION-linux-x86_64
+
+# Simplify for cross-container
+ENV ES_URL http://es:9200
+
+WORKDIR $KIBANA_HOME
+
+ADD start.sh /start
+
+EXPOSE 5601
+
+RUN bin/kibana-plugin install x-pack
+
+CMD ["/start"]
